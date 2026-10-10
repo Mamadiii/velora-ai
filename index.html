@@ -196,7 +196,8 @@ async function loadImages() {
       gsrnamespace: '6',
       gsrlimit: '30',
       prop: 'imageinfo',
-      iiprop: 'url',
+      iiprop: 'url|extmetadata',
+      iiextmetadatafilter: 'LicenseShortName|Artist|Credit|LicenseUrl',
       iiurlwidth: '500',
       format: 'json',
       origin: '*'
@@ -234,11 +235,26 @@ async function loadImages() {
       const name = document.createElement('span');
       name.textContent = title;
 
-      const label = document.createElement('small');
-      label.textContent = 'Wikimedia Commons';
+      const meta = info.extmetadata || {};
 
-      details.appendChild(name);
-      details.appendChild(label);
+const artist = document.createElement('small');
+artist.textContent = 'Creator: ' +
+  (meta.Artist?.value?.replace(/<[^>]*>/g, '') || 'Unknown');
+
+const license = document.createElement('a');
+license.textContent = 'License: ' +
+  (meta.LicenseShortName?.value || 'Check source');
+
+license.href = info.descriptionurl ||
+  'https://commons.wikimedia.org/wiki/' +
+  encodeURIComponent(page.title).replace(/%3A/gi, ':');
+license.target = '_blank';
+license.rel = 'noopener noreferrer';
+license.style.color = '#c38af1';
+
+details.appendChild(name);
+details.appendChild(artist);
+details.appendChild(license);
       card.appendChild(img);
       card.appendChild(details);
       grid.appendChild(card);
