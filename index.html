@@ -346,6 +346,7 @@ footer span{float:none;display:block;margin-top:10px}
 <footer>✨ Velora AI <span>Creative inspiration for everyone.</span></footer>
 
 <script>
+
 const form = document.getElementById('searchForm');
 const input = document.getElementById('searchInput');
 const grid = document.getElementById('galleryGrid');
@@ -355,6 +356,8 @@ const empty = document.getElementById('emptyMessage');
 
 let selected = 'all';
 let requestNumber = 0;
+let images = [];
+let currentIndex = 0;
 
 const categoryTerms = {
   all: 'fantasy landscape portrait',
@@ -364,19 +367,158 @@ const categoryTerms = {
   nature: 'nature landscape'
 };
 
+function cleanText(value) {
+  const el = document.createElement('div');
+  el.innerHTML = value || '';
+  return (el.textContent || '').trim();
+}
+
+function openViewer(index) {
+  if (!images.length) return;
+
+  currentIndex = (index + images.length) % images.length;
+
+  let viewer = document.getElementById('veloraViewer');
+
+  if (!viewer) {
+    viewer = document.createElement('div');
+    viewer.id = 'veloraViewer';
+    viewer.className = 'velora-viewer';
+    viewer.hidden = true;
+
+    viewer.innerHTML = `
+      <div class="viewer-panel" role="dialog"
+           aria-modal="true" aria-label="Image viewer">
+        <div class="viewer-top">
+          <span class="viewer-brand">✦ VELORA AI</span>
+          <button class="viewer-close" aria-label="Close">×</button>
+        </div>
+        <div class="viewer-stage">
+          <img class="viewer-image" alt="">
+          <button class="viewer-arrow viewer-prev"
+            aria-label="Previous image">‹</button>
+          <button class="viewer-arrow viewer-next"
+            aria-label="Next image">›</button>
+          <span class="viewer-position"></span>
+        </div>
+        <div class="viewer-details">
+          <h2 class="viewer-title"></h2>
+          <div class="viewer-meta"></div>
+          <div class="viewer-actions">
+            <a class="viewer-btn primary viewer-download"
+               target="_blank" rel="noopener noreferrer">↓ Open image</a>
+            <a class="viewer-btn viewer-source"
+               target="_blank" rel="noopener noreferrer">↗ Source</a>
+            <button class="viewer-btn viewer-copy">⧉ Copy link</button>
+          </div>
+          <div class="viewer-note">
+            Please check the original image page for its license
+            and attribution requirements before reuse.
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(viewer);
+
+    viewer.addEventListener('click', function(e) {
+      if (e.target === viewer ||
+          e.target.closest('.viewer-close')) {
+        closeViewer();
+      }
+      if (e.target.closest('.viewer-prev')) {
+        openViewer(currentIndex - 1);
+      }
+      if (e.target.closest('.viewer-next')) {
+        openViewer(currentIndex + 1);
+      }
+      if (e.target.closest('.viewer-copy')) {
+        const item = images[currentIndex];
+        if (item) {
+          const link = item.source;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(function() {
+              viewer.querySelector('.viewer-copy').textContent =
+                '✓ Copied';
+            }).catch(function() {
+              window.prompt('Copy image source:', link);
+            });
+          } else {
+            window.prompt('Copy image source:', link);
+          }
+        }
+      }
+    });
+  }
+
+  const item = images[currentIndex];
+  if (!item) return;
+
+  viewer.hidden = false;
+  viewer.querySelector('.viewer-image').src = item.full;
+  viewer.querySelector('.viewer-image').alt = item.title;
+  viewer.querySelector('.viewer-title').textContent = item.title;
+  viewer.querySelector('.viewer-position').textContent =
+    (currentIndex + 1) + ' / ' + images.length;
+
+  const meta = viewer.querySelector('.viewer-meta');
+  meta.replaceChildren();
+
+  const creator = document.createElement('p');
+  creator.textContent = 'Creator: ' + (item.artist || 'Unknown creator');
+  meta.appendChild(creator);
+
+  const license = document.createElement('p');
+  license.append('License: ');
+
+  const licenseLink = document.createElement('a');
+  licenseLink.href = item.licenseUrl || item.source;
+  licenseLink.target = '_blank';
+  licenseLink.rel = 'noopener noreferrer';
+  licenseLink.textContent = item.license || 'Check source';
+  license.appendChild(licenseLink);
+  meta.appendChild(license);
+
+  viewer.querySelector('.viewer-download').href = item.full;
+  viewer.querySelector('.viewer-source').href = item.source;
+  viewer.querySelector('.viewer-copy').textContent = '⧉ Copy link';
+
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(function() {
+    viewer.classList.add('show');
+  });
+}
+
+function closeViewer() {
+  const viewer = document.getElementById('veloraViewer');
+  if (!viewer) return;
+  viewer.classList.remove('show');
+  document.body.style.overflow = '';
+  setTimeout(function() {
+    if (!viewer.classList.contains('show')) viewer.hidden = true;
+  }, 250);
+}
+
+document.addEventListener('keydown', function(e) {
+  const viewer = document.getElementById('veloraViewer');
+  if (!viewer || viewer.hidden) return;
+
+  if (e.key === 'Escape') closeViewer();
+  if (e.key === 'ArrowLeft') openViewer(currentIndex - 1);
+  if (e.key === 'ArrowRight') openViewer(currentIndex + 1);
+});
+
 async function loadImages() {
   const thisRequest = ++requestNumber;
-  const typed = input.value.trim();
-  const query = typed || categoryTerms[selected] || 'fantasy art';
+  const query = input.value.trim() ||
+    categoryTerms[selected] || 'fantasy art';
 
   grid.innerHTML = '';
+  images = [];
   count.textContent = 'Searching...';
   empty.hidden = true;
 
   try {
-    const url = new URL(
-      'https://commons.wikimedia.org/w/api.php'
-    );
+    const url = new URL('https://commons.wikimedia.org/w/api.php');
 
     url.search = new URLSearchParams({
       action: 'query',
@@ -386,8 +528,9 @@ async function loadImages() {
       gsrlimit: '30',
       prop: 'imageinfo',
       iiprop: 'url|extmetadata',
-      iiextmetadatafilter: 'LicenseShortName|Artist|Credit|LicenseUrl',
-      iiurlwidth: '500',
+      iiextmetadatafilter:
+        'LicenseShortName|Artist|Credit|LicenseUrl',
+      iiurlwidth: '700',
       format: 'json',
       origin: '*'
     });
@@ -399,7 +542,6 @@ async function loadImages() {
     if (thisRequest !== requestNumber) return;
 
     const pages = Object.values(data.query?.pages || {});
-    let added = 0;
 
     pages.forEach(function(page) {
       const info = page.imageinfo && page.imageinfo[0];
@@ -410,54 +552,65 @@ async function loadImages() {
         .replace(/\.[^.]+$/, '')
         .replace(/_/g, ' ');
 
+      const meta = info.extmetadata || {};
+      const item = {
+        title: title,
+        thumb: info.thumburl,
+        full: info.url || info.thumburl,
+        source: info.descriptionurl ||
+          'https://commons.wikimedia.org/wiki/' +
+          encodeURIComponent(page.title).replace(/%3A/gi, ':'),
+        artist: cleanText(meta.Artist?.value) ||
+          cleanText(meta.Credit?.value) || 'Unknown',
+        license: cleanText(meta.LicenseShortName?.value) ||
+          'Check source',
+        licenseUrl: meta.LicenseUrl?.value || info.descriptionurl
+      };
+
+      images.push(item);
+
       const card = document.createElement('article');
       card.className = 'image-card';
 
       const img = document.createElement('img');
       img.loading = 'lazy';
-      img.src = info.thumburl;
-      img.alt = title;
+      img.src = item.thumb;
+      img.alt = item.title;
 
       const details = document.createElement('div');
       details.className = 'image-info';
 
       const name = document.createElement('span');
-      name.textContent = title;
+      name.textContent = item.title;
 
-      const meta = info.extmetadata || {};
+      const artist = document.createElement('small');
+      artist.textContent = 'Creator: ' + item.artist;
 
-const artist = document.createElement('small');
-artist.textContent = 'Creator: ' +
-  (meta.Artist?.value?.replace(/<[^>]*>/g, '') || 'Unknown');
+      const license = document.createElement('a');
+      license.textContent = 'License: ' + item.license;
+      license.href = item.source;
+      license.target = '_blank';
+      license.rel = 'noopener noreferrer';
+      license.style.color = '#c38af1';
 
-const license = document.createElement('a');
-license.textContent = 'License: ' +
-  (meta.LicenseShortName?.value || 'Check source');
+      details.append(name, artist, license);
+      card.append(img, details);
 
-license.href = info.descriptionurl ||
-  'https://commons.wikimedia.org/wiki/' +
-  encodeURIComponent(page.title).replace(/%3A/gi, ':');
-license.target = '_blank';
-license.rel = 'noopener noreferrer';
-license.style.color = '#c38af1';
+      card.addEventListener('click', function(e) {
+        if (e.target.closest('a')) return;
+        openViewer(images.indexOf(item));
+      });
 
-details.appendChild(name);
-details.appendChild(artist);
-details.appendChild(license);
-      card.appendChild(img);
-      card.appendChild(details);
       grid.appendChild(card);
-      added++;
     });
 
-    count.textContent = added + ' images';
-    empty.hidden = added !== 0;
+    count.textContent = images.length + ' images';
+    empty.hidden = images.length !== 0;
 
   } catch (error) {
     if (thisRequest !== requestNumber) return;
     count.textContent = 'Search unavailable';
-    empty.textContent =
-      'Could not load images. Please try again.';
+    empty.textContent = 'Could not load images. Please try again.';
     empty.hidden = false;
   }
 }
