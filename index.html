@@ -157,45 +157,128 @@ footer span{float:none;display:block;margin-top:10px}
 <footer>✨ Velora AI <span>Creative inspiration for everyone.</span></footer>
 
 <script>
-const searchForm=document.getElementById('searchForm');
-const searchInput=document.getElementById('searchInput');
-const cards=document.querySelectorAll('.image-card');
-const categories=document.querySelectorAll('.category');
-const resultsCount=document.getElementById('resultsCount');
-const emptyMessage=document.getElementById('emptyMessage');
-let selectedCategory='all';
+const form = document.getElementById('searchForm');
+const input = document.getElementById('searchInput');
+const grid = document.getElementById('galleryGrid');
+const categories = document.querySelectorAll('.category');
+const count = document.getElementById('resultsCount');
+const empty = document.getElementById('emptyMessage');
 
-function filterGallery(){
-const query=searchInput.value.trim().toLowerCase();
-let count=0;
-cards.forEach(function(card){
-const tags=card.dataset.tags.toLowerCase();
-const title=card.querySelector('.image-info span').textContent.toLowerCase();
-const category=card.querySelector('.image-info small').textContent.toLowerCase();
-const matchesText=!query||(tags+' '+title+' '+category).includes(query);
-const matchesCategory=selectedCategory==='all'||tags.includes(selectedCategory)||category.includes(selectedCategory);
-const visible=matchesText&&matchesCategory;
-card.hidden=!visible;
-if(visible)count++;
-});
-resultsCount.textContent=count+' images';
-emptyMessage.hidden=count!==0;
+let selected = 'all';
+let requestNumber = 0;
+
+const categoryTerms = {
+  all: 'fantasy landscape portrait',
+  fantasy: 'fantasy art',
+  fashion: 'fashion portrait',
+  portrait: 'portrait photography',
+  nature: 'nature landscape'
+};
+
+async function loadImages() {
+  const thisRequest = ++requestNumber;
+  const typed = input.value.trim();
+  const query = typed || categoryTerms[selected] || 'fantasy art';
+
+  grid.innerHTML = '';
+  count.textContent = 'Searching...';
+  empty.hidden = true;
+
+  try {
+    const url = new URL(
+      'https://commons.wikimedia.org/w/api.php'
+    );
+
+    url.search = new URLSearchParams({
+      action: 'query',
+      generator: 'search',
+      gsrsearch: query,
+      gsrnamespace: '6',
+      gsrlimit: '30',
+      prop: 'imageinfo',
+      iiprop: 'url',
+      iiurlwidth: '500',
+      format: 'json',
+      origin: '*'
+    });
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network error');
+
+    const data = await response.json();
+    if (thisRequest !== requestNumber) return;
+
+    const pages = Object.values(data.query?.pages || {});
+    let added = 0;
+
+    pages.forEach(function(page) {
+      const info = page.imageinfo && page.imageinfo[0];
+      if (!info || !info.thumburl) return;
+
+      const title = page.title
+        .replace(/^File:/i, '')
+        .replace(/\.[^.]+$/, '')
+        .replace(/_/g, ' ');
+
+      const card = document.createElement('article');
+      card.className = 'image-card';
+
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.src = info.thumburl;
+      img.alt = title;
+
+      const details = document.createElement('div');
+      details.className = 'image-info';
+
+      const name = document.createElement('span');
+      name.textContent = title;
+
+      const label = document.createElement('small');
+      label.textContent = 'Wikimedia Commons';
+
+      details.appendChild(name);
+      details.appendChild(label);
+      card.appendChild(img);
+      card.appendChild(details);
+      grid.appendChild(card);
+      added++;
+    });
+
+    count.textContent = added + ' images';
+    empty.hidden = added !== 0;
+
+  } catch (error) {
+    if (thisRequest !== requestNumber) return;
+    count.textContent = 'Search unavailable';
+    empty.textContent =
+      'Could not load images. Please try again.';
+    empty.hidden = false;
+  }
 }
-searchForm.addEventListener('submit',function(event){
-event.preventDefault();
-filterGallery();
-document.getElementById('gallery').scrollIntoView({behavior:'smooth'});
+
+form.addEventListener('submit', function(event) {
+  event.preventDefault();
+  loadImages();
+  document.getElementById('gallery')
+    .scrollIntoView({ behavior: 'smooth' });
 });
-searchInput.addEventListener('input',filterGallery);
-categories.forEach(function(button){
-button.addEventListener('click',function(){
-selectedCategory=button.dataset.category;
-categories.forEach(function(item){item.classList.remove('active')});
-button.classList.add('active');
-filterGallery();
+
+categories.forEach(function(button) {
+  button.addEventListener('click', function() {
+    selected = button.dataset.category;
+
+    categories.forEach(function(item) {
+      item.classList.remove('active');
+    });
+
+    button.classList.add('active');
+    input.value = '';
+    loadImages();
+  });
 });
-});
-filterGallery();
+
+loadImages();
 </script>
 </body>
 </html>
