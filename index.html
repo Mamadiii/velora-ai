@@ -129,12 +129,25 @@ footer span{float:right;color:#aaa;font-size:13px}
   border-radius: 15px;
   background: #080710;
 }
+.viewer-stage {
+  min-height: 300px;
+}
+
 .viewer-image {
   display: block;
-  max-width: 100%;
   width: 100%;
-  max-height: 56vh;
+  max-width: 100%;
+  height: 70vh;
+  max-height: 750px;
   object-fit: contain;
+}
+
+@media(max-width:600px) {
+  .viewer-image {
+    height: 58vh;
+    max-height: 600px;
+  }
+}
   animation: viewerReveal .35s ease;
 }
 @keyframes viewerReveal {
