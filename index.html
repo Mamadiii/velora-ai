@@ -42,7 +42,196 @@ h2{font-size:27px;margin:10px 0}
 #emptyMessage{text-align:center;color:#ccc;padding:30px}
 footer{padding:25px 6%;border-top:1px solid #29223a;color:#c58af4}
 footer span{float:right;color:#aaa;font-size:13px}
-[hidden]{display:none!important}
+
+/* Velora AI — Premium Image Viewer */
+.image-card {
+  cursor: pointer;
+  transition: transform .25s ease, border-color .25s ease,
+    box-shadow .25s ease;
+}
+.image-card:hover {
+  transform: translateY(-5px);
+  border-color: #a45cf0;
+  box-shadow: 0 12px 35px #8b36ff22;
+}
+.image-card img {
+  transition: transform .45s ease;
+}
+.image-card:hover img {
+  transform: scale(1.035);
+}
+.image-info a {
+  font-size: 12px;
+  text-decoration: none;
+}
+.velora-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(4, 3, 12, .86);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.velora-viewer.show {
+  opacity: 1;
+}
+.viewer-panel {
+  position: relative;
+  width: min(850px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  border: 1px solid #65418a;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #171225, #090811 75%);
+  box-shadow: 0 0 70px #8e36ff25;
+  transform: translateY(18px) scale(.97);
+  transition: transform .3s ease;
+}
+.velora-viewer.show .viewer-panel {
+  transform: translateY(0) scale(1);
+}
+.viewer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+}
+.viewer-brand {
+  color: #d4a0ff;
+  font-size: 12px;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+.viewer-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #443352;
+  border-radius: 50%;
+  background: #21172e;
+  color: white;
+  font-size: 23px;
+  cursor: pointer;
+}
+.viewer-stage {
+  position: relative;
+  margin: 0 18px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 15px;
+  background: #080710;
+}
+.viewer-image {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  max-height: 56vh;
+  object-fit: contain;
+  animation: viewerReveal .35s ease;
+}
+@keyframes viewerReveal {
+  from {opacity: .3; transform: scale(.98)}
+  to {opacity: 1; transform: scale(1)}
+}
+.viewer-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border: 1px solid #ffffff55;
+  border-radius: 50%;
+  color: white;
+  background: #100c20d9;
+  font-size: 25px;
+  cursor: pointer;
+}
+.viewer-prev {left: 12px}
+.viewer-next {right: 12px}
+.viewer-position {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 7px 11px;
+  border-radius: 20px;
+  background: #080710d9;
+  color: white;
+  font-size: 12px;
+}
+.viewer-details {
+  padding: 20px 24px 25px;
+}
+.viewer-title {
+  margin: 0 0 14px;
+  font-size: 23px;
+  overflow-wrap: anywhere;
+}
+.viewer-meta {
+  color: #c6b8db;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.viewer-meta a {
+  color: #d4a0ff;
+}
+.viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+.viewer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid #4a365e;
+  border-radius: 30px;
+  background: #191326;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.viewer-btn.primary {
+  border-color: transparent;
+  background: linear-gradient(110deg, #a64bf1, #d06dff);
+  box-shadow: 0 4px 20px #a64bf144;
+}
+.viewer-btn:active {
+  transform: scale(.97);
+}
+.viewer-note {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #30243f;
+  color: #9f93b5;
+  font-size: 12px;
+  line-height: 1.7;
+}
+@media(max-width:600px) {
+  .velora-viewer {padding: 8px}
+  .viewer-panel {max-height: 95vh;border-radius: 17px}
+  .viewer-top {padding: 12px 14px}
+  .viewer-stage {margin: 0 10px}
+  .viewer-image {max-height: 48vh}
+  .viewer-details {padding: 16px}
+  .viewer-title {font-size: 20px}
+  .viewer-btn {flex: 1;padding: 0 12px}
+}
+  [hidden]{display:none!important}
 @media(max-width:700px){
 .navbar{padding:15px 4%;flex-wrap:wrap}
 nav{gap:13px}
